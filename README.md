@@ -1,42 +1,37 @@
-# In-Memory Database System (C Implementation)
+# In-Memory Key-Value Store (C)
 
-A lightweight, persistent In-Memory Key-Value Database Management System (DBMS) built from scratch in C. The system utilizes dynamic data structures for low-latency memory operations and provides file-handling capabilities to persist volatile memory states to storage.
+A lightweight key-value database written in C. It handles fast in-memory operations using dynamic linked lists and includes simple file serialization to save and restore database state from disk.
 
-## 🛠️ Overview & Architecture
+## Overview & Implementation
 
-This project implements a key-value storage engine operating entirely in volatile memory (RAM) to provide fast data access and manipulation. To overcome the volatile nature of in-memory storage, the system includes custom serialization and deserialization routines to load and save data directly to disk files.
+The core database runs entirely in RAM to keep read/write operations low-latency. To handle persistence across restarts, active key-value pairs can be dumped to disk and reloaded into memory at boot.
 
-### Key Data Structures & Concepts Used
-* **Singly Linked Lists:** Serves as the primary dynamic storage structure for indexing and managing variable-length key-value pairs without pre-allocating fixed memory bounds.
-* **Dynamic Memory Allocation (`malloc`, `free`):** Dynamically allocates nodes upon key creation (`set`) and deallocates heap memory upon record deletion (`delete`) to prevent memory leaks.
-* **Structures (`struct`) & Type Definitions (`typedef`):** Encapsulates key-value records and node pointer metadata to maintain clean data abstraction.
-* **File I/O Streams:** Manages state persistence by streaming in-memory data structures to and from persistent storage files.
+### Core Concepts
 
-## 💻 Commands & Functionality
+* **Singly Linked Lists:** Used as the primary data structure for dynamic node allocation, allowing variable-length entries without fixing storage bounds beforehand.
+* **Manual Memory Management:** Dynamic allocation using `malloc()` on insert (`SET`) and explicit cleanup using `free()` on record removal (`DELETE`) to prevent memory leaks.
+* **File I/O & Serialization:** Streams the linked list to disk during a `SAVE` command and rebuilds the node structure during a `LOAD` operation.
 
-The database supports a command-line interface with the following core operations:
+## Commands
 
-| Command | Syntax / Action | Description |
+The CLI supports six core commands:
+
+| Command | Usage | Action |
 | :--- | :--- | :--- |
-| **`SET`** | `SET <key> <value>` | Inserts a new key-value pair into the database or updates an existing entry. |
-| **`GET`** | `GET <key>` | Traverses the linked list to retrieve and display the value associated with the specified key. |
-| **`DELETE`** | `DELETE <key>` | Searches for the key, updates adjacent pointers, and frees heap memory allocated to the node. |
-| **`EXISTS`** | `EXISTS <key>` | Checks if a record with the specified key currently resides in memory (returns boolean status). |
-| **`SAVE`** | `SAVE <filename>` | Serializes all active in-memory nodes and writes the dataset to a persistent disk file. |
-| **`LOAD`** | `LOAD <filename>` | Parses a specified file from storage, reconstructs the node graph, and restores it into RAM. |
+| **`SET`** | `SET <key> <value>` | Inserts a new key-value pair or overwrites an existing key. |
+| **`GET`** | `GET <key>` | Searches the list and prints the associated value. |
+| **`DELETE`** | `DELETE <key>` | Unlinks the node from the list and frees its memory. |
+| **`EXISTS`** | `EXISTS <key>` | Returns whether the key currently exists in memory. |
+| **`SAVE`** | `SAVE <filename>` | Serializes all active nodes to a file on disk. |
+| **`LOAD`** | `LOAD <filename>` | Reads a storage file and reconstructs the list in memory. |
 
+## Technical Challenges & Takeaways
 
-## 🎯 Engineering Challenges & Key Learnings
+* **Pointer Safety & Memory Leaks:** Deleting nodes required careful pointer re-linking before calling `free()`. Missing edge cases (like removing the head node or clearing an empty list) initially caused segmentation faults, which were fixed by adding strict null checks during traversal.
+* **Buffer Overflow Protection:** Swapped out unsafe input functions like `gets()` for boundary-checked string parsing (`fgets()` and width-limited `scanf()`) to prevent user inputs from overflowing buffer limits and corrupting stack memory.
 
-### 1. Pointer Manipulation & Linked List Logic
-* **Challenge:** Traversing, inserting, and deleting nodes in a singly linked list was initially a complex concept, leading to pointer tracking errors and dangling memory references during deletion operations.
-* **Solution:** Standardized pointer updates by explicitly updating `next` pointers prior to freeing memory blocks and implementing systematic null-pointer checks during head/tail traversals.
+## Roadmap
 
-### 2. Buffer Overflow & Input Sanitation (`gets()` vs. `scanf()`)
-* **Challenge:** Initial iterations used the unsafe `gets()` function for string input. Entering strings that exceeded the allocated buffer size caused unsafe memory writes, leading to random **segmentation faults** due to stack corruption.
-* **Solution:** Deprecated `gets()` and replaced it with width-limited string reading techniques (e.g., `scanf("%8s", ...)` and safer alternatives like `fgets()`). This enforces strict boundary checking, guaranteeing that user input never writes past the allocated memory buffer.
-
-## 🚀 Future Enhancements
-- [ ] Implement a Hash Map indexing layer on top of linked lists to improve lookups from O(N) time complexity to average O(1).
-- [ ] Add support for custom data types beyond standard string key-value pairs.
-- [ ] Support transactional operations (`BEGIN`, `COMMIT`, `ROLLBACK`).
+- [ ] Add a Hash Map layer over the linked list to bring lookup times down from O(N) to O(1).
+- [ ] Support complex data types beyond basic string pairs.
+- [ ] Add basic transaction support (`BEGIN`, `COMMIT`, `ROLLBACK`).
